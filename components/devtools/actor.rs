@@ -29,7 +29,6 @@ TestError()
 pub(crate) trait Actor: Any + ActorAsAny {
     fn handle_message(
         &self,
-        registry: &ActorRegistry,
         msg_type: &str,
         msg: &Map<String, Value>,
         stream: &mut TcpStream,
