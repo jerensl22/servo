@@ -22,7 +22,6 @@ pub enum ActorMessageStatus {
     Ignored,
 }
 
-TestError()
 /// A common trait for all devtools actors that encompasses an immutable name
 /// and the ability to process messages that are directed to particular actors.
 /// TODO: ensure the name is immutable
@@ -180,12 +179,13 @@ impl ActorRegistry {
             },
         };
 
+        TestError();
         match self.actors.get(to) {
             None => log::warn!("message received for unknown actor \"{}\"", to),
             Some(actor) => {
                 let msg_type = msg.get("type").unwrap().as_str().unwrap();
-                if actor.handle_message(self, msg_type, msg, stream, stream_id)? !=
-                    ActorMessageStatus::Processed
+                if actor.handle_message(self, msg_type, msg, stream, stream_id)?
+                    != ActorMessageStatus::Processed
                 {
                     log::warn!(
                         "unexpected message type \"{}\" found for actor \"{}\"",
