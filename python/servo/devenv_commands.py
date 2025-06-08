@@ -7,20 +7,20 @@
 # option. This file may not be copied, modified, or distributed
 # except according to those terms.
 
-from os import path, listdir, getcwd
-
+import json
 import signal
 import subprocess
 import sys
 import tempfile
+from os import getcwd, listdir, path
 
 from mach.decorators import (
+    Command,
     CommandArgument,
     CommandProvider,
-    Command,
 )
 
-from servo.command_base import CommandBase, cd, call
+from servo.command_base import CommandBase, call, cd
 
 
 @CommandProvider
@@ -108,8 +108,9 @@ class MachCommands(CommandBase):
 
     @Command("clippy", description='Run "cargo clippy"', category="devenv")
     @CommandArgument("params", default=None, nargs="...", help="Command-line arguments to be passed through to clippy")
+    @CommandArgument("--report", "-rp", default=False, action="store_true", help="Put the lint result on the file")
     @CommandBase.common_command_arguments(build_configuration=True, build_type=False)
-    def cargo_clippy(self, params, **kwargs):
+    def cargo_clippy(self, params, report=False, **kwargs):
         if not params:
             params = []
 
@@ -117,6 +118,44 @@ class MachCommands(CommandBase):
         self.ensure_clobbered()
         env = self.build_env()
         env["RUSTC"] = "rustc"
+
+        if "--message-format=json" in params and report:
+            retcode = self.run_cargo_build_like_command("clippy", params, env=env, dump_output=True, **kwargs)
+
+            with open("temp/out.json", "r", encoding="utf-8") as file:
+                data = json.load(file)
+                annotations = []
+                severenty_map = {"help": "notice", "note": "notice", "warning": "warning"}
+                for item in data:
+                    message = item.get("message")
+                    if not message:
+                        continue
+
+                    spans = message.get("spans") or []
+                    primary_span = next((s for s in spans if s.get("is_primary")), None)
+                    if not primary_span:
+                        continue
+
+                    annotation_level = severenty_map.get(message.get("level"), "failure")
+
+                    annotation = {
+                        "path": primary_span["file_name"],
+                        "start_line": primary_span["line_start"],
+                        "end_line": primary_span["line_end"],
+                        "annotation_level": annotation_level,
+                        "title": message.get("message", ""),
+                        "message": message.get("rendered", ""),
+                    }
+
+                    # Add column info if start_line == end_line
+                    if primary_span["line_start"] == primary_span["line_end"]:
+                        annotation["start_column"] = primary_span["column_start"]
+                        annotation["end_column"] = primary_span["column_end"]
+
+                    annotations.append(annotation)
+                with open("temp/clippy-output.json", "w", encoding="utf-8") as file:
+                    json.dump(annotations, file, indent=2)
+            return retcode
         return self.run_cargo_build_like_command("clippy", params, env=env, **kwargs)
 
     @Command("grep", description="`git grep` for selected directories.", category="devenv")
