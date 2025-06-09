@@ -127,6 +127,9 @@ class MachCommands(CommandBase):
                 annotations = []
                 severenty_map = {"help": "notice", "note": "notice", "warning": "warning"}
                 for item in data:
+                    if len(annotations) >= 3:
+                        break
+
                     message = item.get("message")
                     if not message:
                         continue
@@ -155,6 +158,7 @@ class MachCommands(CommandBase):
                     annotations.append(annotation)
                 with open("temp/clippy-output.json", "w", encoding="utf-8") as file:
                     json.dump(annotations, file, indent=2)
+                    file.write("\n")
             return retcode
         return self.run_cargo_build_like_command("clippy", params, env=env, **kwargs)
 
