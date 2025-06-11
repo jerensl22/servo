@@ -117,7 +117,11 @@ impl ActorRegistry {
         if script_id.is_empty() {
             return "".to_owned();
         }
+
+
         self.script_actors.borrow().get(&script_id).unwrap().clone()
+    
+
     }
 
     pub fn script_actor_registered(&self, script_id: String) -> bool {
