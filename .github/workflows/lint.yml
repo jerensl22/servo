@@ -55,6 +55,9 @@ jobs:
       - name: Tidy
         if: ${{ !cancelled() }}
         run: ./mach test-tidy --no-progress --all --report-ci
+      - name: Test annotation
+        if: ${{ !cancelled() }}
+        run: echo "::notice file=readme.md,line=1,col=1,endColumn=1::Test Coloumn"
       - name: Clippy Linter Result Upload
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
